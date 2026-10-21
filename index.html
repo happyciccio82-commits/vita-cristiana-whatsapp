@@ -3,124 +3,157 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#1769aa">
-<title>Vita cristiana e ministero</title>
+<title>Vita cristiana e ministero → WhatsApp</title>
 <style>
-:root{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#17212b;background:#f3f6fa}
-*{box-sizing:border-box}body{margin:0}header{background:#1769aa;color:white;padding:24px 18px}
-header h1{font-size:1.35rem;margin:0 0 6px}header p{margin:0;opacity:.92}
-main{max-width:850px;margin:18px auto;padding:0 14px 40px}.card{background:#fff;border-radius:16px;padding:18px;margin:14px 0;box-shadow:0 3px 14px #12263a12}
-h2{font-size:1.08rem;margin:0 0 12px}.hint{font-size:.9rem;color:#526273;line-height:1.45}
-button,.button{display:inline-block;border:0;border-radius:10px;padding:12px 15px;font-size:1rem;font-weight:650;cursor:pointer;text-decoration:none}
-.primary{background:#1769aa;color:#fff}.secondary{background:#e8f1fa;color:#174b76}.warning{background:#fff2d8;color:#714900}
-input,textarea{width:100%;padding:11px;border:1px solid #c8d2dc;border-radius:9px;font:inherit;margin-top:5px;background:white}
-label{display:block;margin:12px 0;font-weight:600;font-size:.93rem}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
-#preview{max-width:100%;max-height:330px;display:none;border-radius:10px;margin-top:12px}
-.status{padding:10px;border-radius:9px;background:#edf6ff;color:#174b76;font-size:.92rem}
-.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.row>*{flex:1}.small{font-size:.82rem;color:#5b6875}
-hr{border:0;border-top:1px solid #e4eaf0;margin:18px 0}
+:root{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#17202a;background:#f4f7f8}
+body{margin:0;padding:18px}.card{max-width:760px;margin:0 auto;background:white;border-radius:18px;padding:20px;box-shadow:0 5px 24px #00000012}
+h1{font-size:1.45rem;margin:0 0 8px}p{line-height:1.45}.muted{color:#59636e;font-size:.94rem}
+label{display:block;font-weight:650;margin:13px 0 5px}input,button,textarea{font:inherit}input[type=text],input[type=date],input[type=number],textarea{box-sizing:border-box;width:100%;padding:11px;border:1px solid #c7d0d8;border-radius:9px;background:white}
+input[type=file]{display:block;width:100%;margin:12px 0}button{border:0;border-radius:10px;padding:12px 14px;background:#126b50;color:white;font-weight:700;cursor:pointer;margin:7px 5px 0 0}button.secondary{background:#e8eef1;color:#17202a}button:disabled{opacity:.5;cursor:wait}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.status{padding:10px;border-radius:9px;background:#eef4f5;margin:12px 0;white-space:pre-wrap}.preview{max-width:100%;max-height:380px;display:block;margin:12px auto;border-radius:8px}.note{font-size:.9rem;background:#fff7dc;padding:12px;border-radius:10px;margin-top:14px}
+@media(max-width:560px){.grid{grid-template-columns:1fr}.card{padding:15px}}
 </style>
 </head>
 <body>
-<header><h1>📖 Vita cristiana e ministero</h1><p>Prepara i messaggi WhatsApp per chi ha la parte e per l'assistente.</p></header>
-<main>
-<section class="card">
-<h2>1. Seleziona una nuova immagine</h2>
-<p class="hint">Scegli uno screenshot dalla memoria del telefono o del computer. Questa prima versione non legge ancora direttamente la cartella privata di Google Drive.</p>
+<main class="card">
+<h1>Vita cristiana e ministero → WhatsApp</h1>
+<p class="muted">Seleziona la scheda come immagine: il sito prova a leggere automaticamente Nome, Assistente, Data, Parte e luogo.</p>
+<label for="imageFile">1. Scegli l'immagine</label>
 <input id="imageFile" type="file" accept="image/*">
-<img id="preview" alt="Anteprima dello screenshot">
-<div id="fileStatus" class="status" style="margin-top:12px">Nessuna immagine selezionata.</div>
-</section>
-<section class="card">
-<h2>2. Verifica i dati riconosciuti</h2>
-<p class="hint">Controlla i nominativi prima di preparare i messaggi. Inserisci i nomi come compaiono nella tabella.</p>
+<img id="preview" class="preview" alt="Anteprima immagine" hidden>
+<div id="status" class="status" role="status">In attesa di un'immagine.</div>
+<button id="readBtn" disabled>Leggi testo e riconosci i campi</button>
 <div class="grid">
-<label>Nome e cognome — chi ha la parte
-<input id="partName" placeholder="Es. Iotti, Maria Rosa" autocomplete="off"></label>
-<label>Nome e cognome — assistente
-<input id="assistantName" placeholder="Es. Chierici, Sasha" autocomplete="off"></label>
-<label>Data dell'adunanza
-<input id="meetingDate" placeholder="Es. 5 novembre 2026"></label>
-<label>Numero della parte
-<input id="partNumber" placeholder="Es. 4"></label>
+<div><label for="person">Nome (persona con la parte)</label><input id="person" type="text" placeholder="Cognome, Nome"></div>
+<div><label for="assistant">Assistente</label><input id="assistant" type="text" placeholder="Cognome, Nome"></div>
+<div><label for="dateText">Data</label><input id="dateText" type="text" placeholder="es. 5 novembre 2026"></div>
+<div><label for="part">Parte n.</label><input id="part" type="text" placeholder="es. 6"></div>
 </div>
-<p class="small">Per sicurezza, il prototipo non invia messaggi e non accede alla rubrica automaticamente.</p>
-</section>
-<section class="card">
-<h2>3. Prepara i messaggi</h2>
-<label>Messaggio per chi ha la parte
-<textarea id="partMessage" rows="4">Ciao! Ti invio l'immagine della tua parte per l'adunanza di Vita cristiana e ministero. Buona preparazione! 😊</textarea></label>
-<label>Messaggio per l'assistente
-<textarea id="assistantMessage" rows="4">Ciao! Ti invio l'immagine della parte in cui sei assistente per l'adunanza di Vita cristiana e ministero. Buona preparazione! 😊</textarea></label>
-<div class="row">
-<button class="secondary" id="fillNames">Personalizza con i nomi</button>
-<button class="primary" id="sharePart">Condividi immagine + messaggio 1</button>
-<button class="primary" id="shareAssistant">Condividi immagine + messaggio 2</button>
-</div>
-<p class="hint">Su Android, la condivisione apre il menu di condivisione del sistema, se il browser supporta la condivisione di immagini. Se non è supportata, puoi aprire WhatsApp con il testo e allegare manualmente lo screenshot. Controlla sempre destinatario e allegato prima di inviare.</p>
-<div class="row">
-<button class="secondary" id="openPart">Apri WhatsApp con testo 1</button>
-<button class="secondary" id="openAssistant">Apri WhatsApp con testo 2</button>
-</div>
-</section>
-<section class="card">
-<h2>🔐 Privacy e limiti della versione iniziale</h2>
-<ul class="hint">
-<li>Le immagini selezionate vengono elaborate in questa pagina; non vengono caricate su un server da questo prototipo.</li>
-<li>Non inserire immagini o dati personali in repository GitHub pubblici.</li>
-<li>Il collegamento a Google Drive richiederà un'autorizzazione Google OAuth configurata separatamente.</li>
-<li>Una pagina web non può leggere liberamente la rubrica Android né inviare automaticamente allegati a chat WhatsApp private.</li>
-<li>Il registro delle immagini già inviate e il riconoscimento OCR automatico non sono ancora attivi in questa prima versione.</li>
-</ul>
-</section>
+<label for="place">Dove svolgerla</label><input id="place" type="text" placeholder="es. Sala principale">
+<label for="raw">Testo letto dall'immagine (utile per controllare)</label>
+<textarea id="raw" rows="5" placeholder="Il testo riconosciuto apparirà qui."></textarea>
+<button id="personBtn" disabled>Prepara messaggio per la persona con la parte</button>
+<button id="assistantBtn" disabled>Prepara messaggio per l'assistente</button>
+<div class="note"><strong>Importante:</strong> il riconoscimento può commettere errori, quindi controlla i nomi prima di condividere. Per privacy, il testo viene elaborato nel browser tramite una libreria OCR caricata da Internet. Il sito non invia automaticamente i messaggi e non accede ai tuoi contatti: scegli tu il destinatario in WhatsApp. Su alcuni telefoni la condivisione può allegare l'immagine; se non succede, WhatsApp potrebbe aprirsi senza allegato e dovrai aggiungerlo manualmente.</div>
 </main>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
-const fileInput=document.getElementById('imageFile');
-const preview=document.getElementById('preview');
-let selectedFile=null;
-fileInput.addEventListener('change',()=>{
- selectedFile=fileInput.files&&fileInput.files[0]||null;
- if(!selectedFile){preview.style.display='none';return}
- if(!selectedFile.type.startsWith('image/')){alert('Seleziona un file immagine.');return}
- preview.src=URL.createObjectURL(selectedFile);preview.style.display='block';
- document.getElementById('fileStatus').textContent='Immagine selezionata: '+selectedFile.name;
-});
-function values(){return {
- part:document.getElementById('partName').value.trim(),
- assistant:document.getElementById('assistantName').value.trim(),
- date:document.getElementById('meetingDate').value.trim(),
- number:document.getElementById('partNumber').value.trim()
-}}
-function buildText(which){
- const v=values();
- let msg=document.getElementById(which==='part'?'partMessage':'assistantMessage').value.trim();
- const name=which==='part'?v.part:v.assistant;
- if(name) msg=msg.replace(/^Ciao!?/i,'Ciao '+name.replace(/^.*,\s*/, '')+'!');
- const extras=[v.date?'Data: '+v.date:'',v.number?'Parte n. '+v.number:''].filter(Boolean).join(' · ');
- if(extras&&!msg.includes(extras))msg+='\n\n'+extras;
- return msg;
+const $ = id => document.getElementById(id);
+let selectedFile = null;
+const status = (s) => $('status').textContent = s;
+function enableButtons() {
+  const hasImage = !!selectedFile;
+  $('readBtn').disabled = !hasImage;
+  $('personBtn').disabled = !hasImage || !$('person').value.trim();
+  $('assistantBtn').disabled = !hasImage || !$('assistant').value.trim();
 }
-document.getElementById('fillNames').addEventListener('click',()=>{
- const v=values();
- document.getElementById('partMessage').value='Ciao '+(v.part.replace(/^.*,\s*/, '')||'[Nome]')+'! 😊\\n\\nTi invio l’immagine della tua parte per l’adunanza di Vita cristiana e ministero'+(v.date?' del '+v.date:'')+'.\\n\\nBuona preparazione! 📖';
- document.getElementById('assistantMessage').value='Ciao '+(v.assistant.replace(/^.*,\s*/, '')||'[Nome]')+'! 😊\\n\\nTi invio l’immagine della parte in cui sei assistente per l’adunanza di Vita cristiana e ministero'+(v.date?' del '+v.date:'')+'.\\n\\nBuona preparazione! 📖';
+['person','assistant'].forEach(id => $(id).addEventListener('input', enableButtons));
+$('imageFile').addEventListener('change', e => {
+  selectedFile = e.target.files && e.target.files[0] || null;
+  if (!selectedFile) return;
+  const url = URL.createObjectURL(selectedFile);
+  $('preview').src = url; $('preview').hidden = false;
+  $('raw').value = ''; $('person').value = ''; $('assistant').value = '';
+  $('dateText').value = ''; $('part').value = ''; $('place').value = '';
+  status('Immagine caricata. Premi “Leggi testo e riconosci i campi”.');
+  enableButtons();
 });
-async function share(which){
- if(!selectedFile){alert('Prima seleziona uno screenshot.');return}
- const text=buildText(which);
- try{
-  if(navigator.share && navigator.canShare && navigator.canShare({files:[selectedFile]})){
-   await navigator.share({title:'Vita cristiana e ministero',text,files:[selectedFile]});
-  }else{
-   alert('La condivisione di immagini non è supportata in questo browser. Si aprirà WhatsApp con il testo; allega lo screenshot manualmente.');
-   window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank','noopener');
+function valueAfterLabel(text, labels) {
+  const lines = text.split(/\n/).map(x => x.replace(/\s+/g,' ').trim()).filter(Boolean);
+  for (let i=0;i<lines.length;i++) {
+    for (const label of labels) {
+      const re = new RegExp('^'+label+'\\s*:?\\s*(.*)$','i');
+      const m = lines[i].match(re);
+      if (m) {
+        let val = m[1].replace(/^[:.\-]+\s*/, '').trim();
+        if (!val && lines[i+1]) val = lines[i+1].trim();
+        if (val) return val;
+      }
+    }
   }
- }catch(e){if(e.name!=='AbortError')alert('Condivisione non completata. Puoi usare “Apri WhatsApp con testo”.')}
+  // Fallback for OCR that merges labels and values onto a line
+  for (const label of labels) {
+    const re = new RegExp(label+'\\s*:?\\s*([^\\n]+)', 'i');
+    const m = text.match(re);
+    if (m && m[1]) return m[1].replace(/^[\s:.-]+/,'').trim();
+  }
+  return '';
 }
-document.getElementById('sharePart').addEventListener('click',()=>share('part'));
-document.getElementById('shareAssistant').addEventListener('click',()=>share('assistant'));
-document.getElementById('openPart').addEventListener('click',()=>window.open('https://wa.me/?text='+encodeURIComponent(buildText('part')),'_blank','noopener'));
-document.getElementById('openAssistant').addEventListener('click',()=>window.open('https://wa.me/?text='+encodeURIComponent(buildText('assistant')),'_blank','noopener'));
+function cleanField(s, nextLabels) {
+  if (!s) return '';
+  let out = s;
+  for (const label of nextLabels) {
+    const idx = out.toLowerCase().indexOf(label.toLowerCase());
+    if (idx > 0) out = out.slice(0,idx);
+  }
+  return out.replace(/[|_]+$/,'').replace(/\s{2,}/g,' ').trim();
+}
+$('readBtn').addEventListener('click', async () => {
+  if (!selectedFile) return;
+  $('readBtn').disabled = true;
+  status('Sto leggendo l’immagine… attendi. La prima volta può richiedere un po’ di tempo.');
+  try {
+    if (!window.Tesseract) throw new Error('Libreria OCR non caricata. Controlla la connessione Internet e ricarica la pagina.');
+    const result = await Tesseract.recognize(selectedFile, 'ita+eng', {
+      logger: m => { if (m.status === 'recognizing text') status('Lettura OCR in corso: ' + Math.round((m.progress||0)*100) + '%'); }
+    });
+    const text = result.data.text || '';
+    $('raw').value = text;
+    let person = valueAfterLabel(text, ['Nome']);
+    let assistant = valueAfterLabel(text, ['Assistente']);
+    let date = valueAfterLabel(text, ['Data']);
+    let part = valueAfterLabel(text, ['Parte\\s*n\\.?','Parte\\s*n\\.']);
+    let place = valueAfterLabel(text, ['Dove\\s+svolgerla','Dove\\s+svolgerla\\s*:']);
+    person = cleanField(person, ['Assistente','Data','Parte','Dove svolgerla','Nota per lo studente']);
+    assistant = cleanField(assistant, ['Data','Parte','Dove svolgerla','Nota per lo studente']);
+    date = cleanField(date, ['Parte','Dove svolgerla','Nota per lo studente']);
+    part = cleanField(part, ['Dove svolgerla','Nota per lo studente']);
+    place = cleanField(place, ['Nota per lo studente','S-89']);
+    $('person').value = person;
+    $('assistant').value = assistant;
+    $('dateText').value = date;
+    $('part').value = part;
+    $('place').value = place;
+    status('Lettura completata. Controlla e correggi i campi: l’OCR può confondere lettere o nomi.');
+  } catch (err) {
+    status('Non sono riuscito a leggere l’immagine: ' + (err.message || err));
+  } finally {
+    $('readBtn').disabled = false;
+    enableButtons();
+  }
+});
+function makeMessage(kind) {
+  const person = $('person').value.trim();
+  const assistant = $('assistant').value.trim();
+  const date = $('dateText').value.trim();
+  const part = $('part').value.trim();
+  const place = $('place').value.trim();
+  if (kind === 'person') {
+    const first = person.includes(',') ? person.split(',').slice(1).join(',').trim() : person.split(' ').slice(-1)[0];
+    return `Ciao ${first}! 😊 Ti invio l’immagine con i dettagli della tua parte per l’adunanza Vita cristiana e ministero${date ? ' del '+date : ''}${part ? '. Parte n. '+part : ''}${place ? ' — '+place : ''}.`;
+  }
+  const first = assistant.includes(',') ? assistant.split(',').slice(1).join(',').trim() : assistant.split(' ').slice(-1)[0];
+  return `Ciao ${first}! 😊 Ti invio l’immagine con i dettagli della parte in cui sei assistente per l’adunanza Vita cristiana e ministero${date ? ' del '+date : ''}${part ? ', parte n. '+part : ''}${place ? ' — '+place : ''}.`;
+}
+async function share(kind) {
+  const msg = makeMessage(kind);
+  try {
+    if (navigator.share && navigator.canShare) {
+      const file = new File([selectedFile], selectedFile.name || 'scheda.jpg', {type:selectedFile.type || 'image/jpeg'});
+      if (navigator.canShare({files:[file]})) {
+        await navigator.share({title:'Vita cristiana e ministero', text:msg, files:[file]});
+        return;
+      }
+    }
+  } catch (e) {
+    if (e.name === 'AbortError') return;
+  }
+  const url = 'https://wa.me/?text=' + encodeURIComponent(msg);
+  window.open(url, '_blank', 'noopener');
+  alert('WhatsApp si aprirà con il testo. Se l’immagine non è allegata, aggiungila manualmente dalla chat prima di inviare.');
+}
+$('personBtn').addEventListener('click', () => share('person'));
+$('assistantBtn').addEventListener('click', () => share('assistant'));
 </script>
 </body>
 </html>
