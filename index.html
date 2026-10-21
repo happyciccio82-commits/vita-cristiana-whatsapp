@@ -37,9 +37,8 @@ input[type=file]{display:block;width:100%;margin:12px 0}button{border:0;border-r
 <script>
 const $=id=>document.getElementById(id);let selectedFile=null,sourceImage=null;
 function say(s){$('status').textContent=s}
-function enable(){const ok=!!selectedFile;$('readBtn').disabled=!ok;$('personBtn').disabled=!ok||!$('person').value.trim();$('assistantBtn').disabled=!ok||!$('assistant').value.trim()}
-['person','assistant'].forEach(id=>$(id).addEventListener('input',enable));
-$('imageFile').addEventListener('change',e=>{
+function enable(){const ok=!!selectedFile;$('readBtn').disabled=!ok;$('personBtn').disabled=!ok\vert{}\vert{}!$('person').value.trim();$('assistantBtn').disabled=!ok\vert{}\vert{}!$('assistant').value.trim()}
+['person','assistant'].forEach(id=>$(id).addEventListener('input',enable));$('imageFile').addEventListener('change',e=>{
  selectedFile=e.target.files?.[0]||null;if(!selectedFile)return;
  $('preview').src=URL.createObjectURL(selectedFile);$('preview').hidden=false;
  sourceImage=new Image();sourceImage.src=$('preview').src;
@@ -71,18 +70,18 @@ function tidyName(s){
 function parseDate(s){
  s=s.replace(/[>||_]/g,' ').replace(/\bN[O0]V[eE]?[mM]?b[rR]e\b/ig,'novembre').replace(/\bN[O0]V[eE]mbre\b/ig,'novembre').replace(/\s+/g,' ').trim();
  const m=s.match(/(\d{1,2})\s+([a-zàèéìòù]+)\s+(20\d{2})/i);
- if(m){const months={gennaio:'gennaio',febbraio:'febbraio',marzo:'marzo',aprile:'aprile',maggio:'maggio',giugno:'giugno',luglio:'luglio',agosto:'agosto',settembre:'settembre',ottobre:'ottobre',novembre:'novembre',dicembre:'dicembre'};const month=Object.keys(months).find(x=>x.startsWith(m[2].toLowerCase().slice(0,3)));if(month)return `${parseInt(m[1],10)} ${month} ${m[3]}`}
+ if(m){const months={gennaio:'gennaio',febbraio:'febbraio',marzo:'marzo',aprile:'aprile',maggio:'maggio',giugno:'giugno',luglio:'luglio',agosto:'agosto',settembre:'settembre',ottobre:'ottobre',novembre:'novembre',dicembre:'dicembre'};const month=Object.keys(months).find(x=>x.startsWith(m[2].toLowerCase().slice(0,3)));if(month)return `${parseInt(m[1],10)} ${month}${m[3]}`}
  return s.replace(/^[^0-9]*/,'').replace(/\s+(?:mne|mne\.|me)$/i,'').trim();
 }
 async function readFields(){
  await waitImage(sourceImage);
- // Fixed template: crop value regions below each bold label, excluding most dotted separator lines.
+ // Fixed template: crop value regions below each bold label with updated coordinates.
  const zones={
-  person:cropZone(sourceImage,.205,.273,.20,.92),
-  assistant:cropZone(sourceImage,.292,.359,.20,.92),
-  dateText:cropZone(sourceImage,.378,.445,.20,.92),
-  part:cropZone(sourceImage,.465,.531,.20,.92),
-  place:cropZone(sourceImage,.553,.622,.34,.92)
+  person:cropZone(sourceImage,.205,.273,.22,.90),
+  assistant:cropZone(sourceImage,.292,.359,.22,.90),
+  dateText:cropZone(sourceImage,.378,.445,.15,.96),
+  part:cropZone(sourceImage,.460,.536,.15,.85),
+  place:cropZone(sourceImage,.558,.618,.32,.90)
  };
  let outputs={};
  for(const [key,canvas] of Object.entries(zones)){
