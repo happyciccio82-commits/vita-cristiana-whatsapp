@@ -1,117 +1,921 @@
-<!doctype html>
-<html lang="it">
+```html
+<!DOCTYPE html>
+<html lang="it" class="h-full">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Vita cristiana e ministero → WhatsApp</title>
-<style>
-:root{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#17202a;background:#f4f7f8}
-body{margin:0;padding:16px}.card{max-width:760px;margin:auto;background:#fff;border-radius:18px;padding:20px;box-shadow:0 5px 24px #0001}
-h1{font-size:1.4rem;margin:0 0 8px}.muted{color:#59636e;line-height:1.45}
-label{display:block;font-weight:650;margin:13px 0 5px}input,button,textarea{font:inherit}
-input[type=text],textarea{box-sizing:border-box;width:100%;padding:11px;border:1px solid #c7d0d8;border-radius:9px}
-input[type=file]{display:block;width:100%;margin:12px 0}button{border:0;border-radius:10px;padding:12px 14px;background:#126b50;color:#fff;font-weight:700;cursor:pointer;margin:7px 5px 0 0}button:disabled{opacity:.5}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.status{padding:10px;border-radius:9px;background:#eef4f5;margin:12px 0;white-space:pre-wrap}
-.preview{max-width:100%;max-height:380px;display:block;margin:12px auto;border-radius:8px}.note{font-size:.9rem;background:#fff7dc;padding:12px;border-radius:10px;margin-top:14px}
-@media(max-width:560px){.grid{grid-template-columns:1fr}.card{padding:15px}}
-</style></head>
-<body><main class="card">
-<h1>Vita cristiana e ministero → WhatsApp</h1>
-<p class="muted">Scheda con struttura fissa: il sito ritaglia le zone dei singoli campi e le legge separatamente per ridurre gli errori.</p>
-<label for="imageFile">1. Scegli l'immagine della scheda (JPG / PNG)</label><input id="imageFile" type="file" accept="image/*">
-<img id="preview" class="preview" alt="Anteprima immagine" hidden>
-<div id="status" class="status">In attesa di un'immagine.</div>
-<button id="readBtn" disabled>Leggi i campi automaticamente</button>
-<div class="grid">
-<div><label for="person">Nome (persona con la parte)</label><input id="person" type="text" placeholder="Cognome, Nome"></div>
-<div><label for="assistant">Assistente</label><input id="assistant" type="text" placeholder="Cognome, Nome"></div>
-<div><label for="dateText">Data</label><input id="dateText" type="text" placeholder="es. 5 novembre 2026"></div>
-<div><label for="part">Parte n.</label><input id="part" type="text" placeholder="es. 6"></div>
-</div>
-<label for="place">Dove svolgerla</label><input id="place" type="text" placeholder="es. Sala principale">
-<label for="raw">Testo OCR (per controllo)</label><textarea id="raw" rows="4" placeholder="Testo riconosciuto"></textarea>
-<button id="personBtn" disabled>Prepara messaggio per la persona con la parte</button>
-<button id="assistantBtn" disabled>Prepara messaggio per l'assistente</button>
-<div class="note"><b>Controllo:</b> verifica i dati riconosciuti prima dell'invio. L'OCR lavora nel browser. Non legge Drive o la rubrica e non invia messaggi da solo. Se la condivisione non allega l'immagine a WhatsApp, aggiungila manualmente.</div>
-</main>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-<script>
-const $=id=>document.getElementById(id);let selectedFile=null,sourceImage=null;
-function say(s){$('status').textContent=s}
-function enable(){const ok=!!selectedFile;$('readBtn').disabled=!ok;$('personBtn').disabled=!ok\vert{}\vert{}!$('person').value.trim();$('assistantBtn').disabled=!ok\vert{}\vert{}!$('assistant').value.trim()}
-['person','assistant'].forEach(id=>$(id).addEventListener('input',enable));$('imageFile').addEventListener('change',e=>{
- selectedFile=e.target.files?.[0]||null;if(!selectedFile)return;
- $('preview').src=URL.createObjectURL(selectedFile);$('preview').hidden=false;
- sourceImage=new Image();sourceImage.src=$('preview').src;
- ['person','assistant','dateText','part','place','raw'].forEach(id=>$(id).value='');
- say('Immagine caricata. Premi “Leggi i campi automaticamente”.');enable();
-});
-function waitImage(img){return new Promise((res,rej)=>{if(img.complete&&img.naturalWidth)return res();img.onload=res;img.onerror=rej})}
-function cropZone(img, y1, y2, x1=.08, x2=.94){
- const c=document.createElement('canvas');
- const sx=Math.round(img.naturalWidth*x1), sy=Math.round(img.naturalHeight*y1);
- const sw=Math.round(img.naturalWidth*(x2-x1)), sh=Math.round(img.naturalHeight*(y2-y1));
- const scale=Math.max(2,Math.min(4,2200/Math.max(sw,sh)));
- c.width=Math.round(sw*scale);c.height=Math.round(sh*scale);
- const ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);
- ctx.filter='grayscale(1) contrast(1.35)';ctx.drawImage(img,sx,sy,sw,sh,0,0,c.width,c.height);ctx.filter='none';
- return c;
-}
-async function ocr(canvas, whitelist){
- const result=await Tesseract.recognize(canvas,'ita+eng',{
-  logger:m=>{if(m.status==='recognizing text')say('Lettura dei campi: '+Math.round((m.progress||0)*100)+'%')},
-  tessedit_pageseg_mode: 6,
-  ...(whitelist?{tessedit_char_whitelist:whitelist}:{})
- });
- return (result.data.text||'').trim();
-}
-function tidyName(s){
- return s.replace(/[\u2500-\u257f_~`|]+/g,' ').replace(/\s+/g,' ').replace(/[.,:;_\- ]+$/,'').replace(/^(?:Nome|Assistente)\s*:?\s*/i,'').trim();
-}
-function parseDate(s){
- s=s.replace(/[>||_]/g,' ').replace(/\bN[O0]V[eE]?[mM]?b[rR]e\b/ig,'novembre').replace(/\bN[O0]V[eE]mbre\b/ig,'novembre').replace(/\s+/g,' ').trim();
- const m=s.match(/(\d{1,2})\s+([a-zàèéìòù]+)\s+(20\d{2})/i);
- if(m){const months={gennaio:'gennaio',febbraio:'febbraio',marzo:'marzo',aprile:'aprile',maggio:'maggio',giugno:'giugno',luglio:'luglio',agosto:'agosto',settembre:'settembre',ottobre:'ottobre',novembre:'novembre',dicembre:'dicembre'};const month=Object.keys(months).find(x=>x.startsWith(m[2].toLowerCase().slice(0,3)));if(month)return `${parseInt(m[1],10)} ${month}${m[3]}`}
- return s.replace(/^[^0-9]*/,'').replace(/\s+(?:mne|mne\.|me)$/i,'').trim();
-}
-async function readFields(){
- await waitImage(sourceImage);
- const zones={
-  person:cropZone(sourceImage,.205,.273,.22,.90),
-  assistant:cropZone(sourceImage,.292,.359,.22,.90),
-  dateText:cropZone(sourceImage,.378,.445,.15,.96),
-  part:cropZone(sourceImage,.460,.536,.15,.85),
-  place:cropZone(sourceImage,.558,.618,.32,.90)
- };
- let outputs={};
- for(const [key,canvas] of Object.entries(zones)){
-  say('Lettura campo: '+({person:'Nome',assistant:'Assistente',dateText:'Data',part:'Parte',place:'Luogo'}[key])+'…');
-  outputs[key]=await ocr(canvas,key==='part'?'0123456789':null);
- }
- $('raw').value=Object.entries(outputs).map(([k,v])=>({person:'Nome',assistant:'Assistente',dateText:'Data',part:'Parte n.',place:'Luogo'}[k])+': '+v).join('\n');
- $('person').value=tidyName(outputs.person);
- $('assistant').value=tidyName(outputs.assistant);
- $('dateText').value=parseDate(outputs.dateText);
- const digits=outputs.part.match(/\d+/);$('part').value=digits?digits[0]:'';
- $('place').value=outputs.place.replace(/[\u2500-\u257f_~`|]+/g,' ').replace(/\s+/g,' ').trim();
- say('Lettura terminata. I campi sono stati letti separatamente. Controlla e correggi eventuali errori.');
-}
-$('readBtn').addEventListener('click',async()=>{
- if(!selectedFile)return;$('readBtn').disabled=true;
- try{if(!window.Tesseract)throw new Error('OCR non caricato. Controlla Internet e ricarica la pagina.');await readFields()}
- catch(e){say('Errore: '+(e.message||e))}
- finally{$('readBtn').disabled=false;enable()}
-});
-function message(kind){
- const p=$('person').value.trim(),a=$('assistant').value.trim(),d=$('dateText').value.trim(),n=$('part').value.trim(),l=$('place').value.trim();
- const first=s=>s.includes(',')?s.split(',').slice(1).join(',').trim():s.split(/\s+/).slice(-1)[0];
- if(kind==='person')return `Ciao ${first(p)}! 😊 Ti invio l’immagine con i dettagli della tua parte per l’adunanza Vita cristiana e ministero${d?' del '+d:''}${n?'. Parte n. '+n:''}${l?' — '+l:''}.`;
- return `Ciao ${first(a)}! 😊 Ti invio l’immagine con i dettagli della parte in cui sei assistente per l’adunanza Vita cristiana e ministero${d?' del '+d:''}${n?', parte n. '+n:''}${l?' — '+l:''}.`;
-}
-async function share(kind){
- const msg=message(kind);
- try{if(navigator.share&&navigator.canShare){const f=new File([selectedFile],selectedFile.name||'scheda.jpg',{type:selectedFile.type||'image/jpeg'});if(navigator.canShare({files:[f]})){await navigator.share({title:'Vita cristiana e ministero',text:msg,files:[f]});return}}}catch(e){if(e.name==='AbortError')return}
- window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank','noopener');
- alert('WhatsApp si aprirà con il testo. Se l’immagine non è allegata, aggiungila manualmente prima di inviare.');
-}
-$('personBtn').addEventListener('click',()=>share('person'));$('assistantBtn').addEventListener('click',()=>share('assistant'));
-</script></body></html>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Assegnazioni S-89 → WhatsApp</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Tesseract.js per OCR -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <!-- pdf.js per parsing PDF lato client -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                            900: '#0f5132',
+                            dark: '#0b141a',
+                            card: '#111b21',
+                            cardLight: '#ffffff'
+                        },
+                        wa: '#25D366'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 4px; }
+        .dark .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-950 text-gray-800 dark:text-gray-100 min-h-screen flex flex-col transition-colors duration-200">
+
+    <!-- Navbar / Header -->
+    <header class="bg-brand-900 text-white shadow-lg sticky top-0 z-30 border-b border-brand-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-white/10 p-2 rounded-xl backdrop-blur-md">
+                    <i data-lucide="book-open" class="w-6 h-6 text-emerald-400"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight sm:text-xl">Gestione S-89</h1>
+                    <p class="text-xs text-emerald-200">Vita cristiana e ministero → WhatsApp</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2 sm:space-x-4">
+                <button id="themeToggleBtn" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition text-emerald-200 hover:text-white" title="Cambia Tema">
+                    <i data-lucide="sun" id="themeIconSun" class="w-5 h-5 hidden"></i>
+                    <i data-lucide="moon" id="themeIconMoon" class="w-5 h-5"></i>
+                </button>
+                <div class="h-6 w-px bg-white/20"></div>
+                <button id="helpBtn" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition text-emerald-200 hover:text-white flex items-center gap-1.5 text-xs font-medium">
+                    <i data-lucide="help-circle" class="w-4 h-4"></i>
+                    <span class="hidden sm:inline">Guida</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- Banner azioni rapide & Caricamento PDF -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Box Caricamento File -->
+            <div class="lg:col-span-2 bg-white dark:bg-gray-900 rounded-2xl p-5 shadow-sm border border-gray-200 dark:border-gray-800 flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <h2 class="font-semibold text-lg flex items-center gap-2 text-gray-900 dark:text-white">
+                            <i data-lucide="file-up" class="w-5 h-5 text-brand-600"></i>
+                            Carica File Assegnazioni
+                        </h2>
+                        <span class="text-xs font-medium bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
+                            PDF o Immagine S-89
+                        </span>
+                    </div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                        Carica il PDF originale <b>S-89</b> contenente più schede per aggiornare la tabella oppure un'immagine di una singola scheda da scansionare con l'OCR mirato.
+                    </p>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <!-- Carica PDF -->
+                        <label class="relative flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-brand-500 dark:hover:border-brand-500 rounded-xl cursor-pointer bg-gray-50 dark:bg-gray-800/50 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20 transition group text-center">
+                            <i data-lucide="file-text" class="w-8 h-8 text-gray-400 group-hover:text-brand-600 dark:group-hover:text-brand-400 mb-2 transition"></i>
+                            <span class="text-xs font-semibold text-gray-700 dark:text-gray-200">Importa PDF S-89</span>
+                            <span class="text-[10px] text-gray-400 mt-0.5">Estrae automaticamente tutte le schede</span>
+                            <input id="pdfInput" type="file" accept="application/pdf" class="hidden">
+                        </label>
+
+                        <!-- Scansiona Immagine (OCR) -->
+                        <label class="relative flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-brand-500 dark:hover:border-brand-500 rounded-xl cursor-pointer bg-gray-50 dark:bg-gray-800/50 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20 transition group text-center">
+                            <i data-lucide="scan" class="w-8 h-8 text-gray-400 group-hover:text-brand-600 dark:group-hover:text-brand-400 mb-2 transition"></i>
+                            <span class="text-xs font-semibold text-gray-700 dark:text-gray-200">Lettore OCR da Immagine</span>
+                            <span class="text-[10px] text-gray-400 mt-0.5">Ritaglio visivo e lettura automatica</span>
+                            <input id="singleImageInput" type="file" accept="image/*" class="hidden">
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Stato operazione -->
+                <div id="statusBox" class="mt-4 p-3 bg-gray-100 dark:bg-gray-800 rounded-xl text-xs flex items-center justify-between text-gray-600 dark:text-gray-300">
+                    <span id="statusText" class="truncate">Dati precaricati attivi: <b>Novembre - Dicembre 2026</b> (19 assegnazioni)</span>
+                    <button id="resetDataBtn" class="text-xs text-brand-600 hover:text-brand-700 font-semibold flex items-center gap-1 ml-2 shrink-0">
+                        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Ripristina Default
+                    </button>
+                </div>
+            </div>
+
+            <!-- Statistiche e Filtri Rapidi -->
+            <div class="bg-white dark:bg-gray-900 rounded-2xl p-5 shadow-sm border border-gray-200 dark:border-gray-800 flex flex-col justify-between">
+                <div>
+                    <h2 class="font-semibold text-lg flex items-center gap-2 text-gray-900 dark:text-white mb-3">
+                        <i data-lucide="filter" class="w-5 h-5 text-brand-600"></i>
+                        Filtra & Cerca
+                    </h2>
+
+                    <div class="space-y-3">
+                        <div class="relative">
+                            <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            <input id="searchInput" type="text" placeholder="Cerca nome, assistente, data..." class="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-brand-500 focus:outline-none transition">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-1 block">Data Adunanza</label>
+                                <select id="dateFilter" class="w-full text-xs py-2 px-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                                    <option value="ALL">Tutte le date</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-1 block">Stato Immagine</label>
+                                <select id="imageFilter" class="w-full text-xs py-2 px-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                                    <option value="ALL">Tutti</option>
+                                    <option value="WITH_IMG">Con Immagine</option>
+                                    <option value="NO_IMG">Senza Immagine</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800 flex justify-between items-center text-xs text-gray-500">
+                    <span>Totale parti: <strong id="totalCount" class="text-gray-900 dark:text-white">0</strong></span>
+                    <span>Mostrate: <strong id="visibleCount" class="text-gray-900 dark:text-white">0</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabella Assegnazioni -->
+        <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+            <div class="p-4 sm:p-5 border-b border-gray-200 dark:border-gray-800 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-2">
+                    <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+                    <h3 class="font-bold text-base sm:text-lg text-gray-900 dark:text-white">Elenco Assegnazioni Programmate</h3>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="addRecordBtn" class="px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition shadow-sm">
+                        <i data-lucide="plus" class="w-4 h-4"></i> Nuova Assegnazione
+                    </button>
+                </div>
+            </div>
+
+            <!-- Responsive Table Wrapper -->
+            <div class="overflow-x-auto custom-scrollbar">
+                <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                    <thead>
+                        <tr class="bg-gray-50 dark:bg-gray-800/60 text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-800 font-semibold">
+                            <th class="py-3.5 px-4">Data</th>
+                            <th class="py-3.5 px-3 text-center">Parte</th>
+                            <th class="py-3.5 px-4">Studente / Titolare</th>
+                            <th class="py-3.5 px-4">Assistente</th>
+                            <th class="py-3.5 px-3">Luogo</th>
+                            <th class="py-3.5 px-3 text-center">Scheda S-89</th>
+                            <th class="py-3.5 px-4 text-right">Azioni WhatsApp</th>
+                        </tr>
+                    </thead>
+                    <tbody id="assignmentsTbody" class="divide-y divide-gray-200 dark:divide-gray-800/80">
+                        <!-- Generato via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal OCR & Crop da Immagine -->
+    <div id="ocrModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-5">
+        <div class="bg-white dark:bg-gray-900 rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+            <div class="p-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between bg-gray-50 dark:bg-gray-800/50">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="scan" class="w-5 h-5 text-brand-600"></i>
+                    <h3 class="font-bold text-base text-gray-900 dark:text-white">Lettura Visiva OCR (Tesseract)</h3>
+                </div>
+                <button id="closeOcrModalBtn" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-lg">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1 custom-scrollbar">
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                    Il sistema applica filtri ad alto contrasto sui box identificati della scheda S-89 per riconoscere accuratamente testo e numeri.
+                </p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Anteprima Immagine + Canvas debug -->
+                    <div class="space-y-2">
+                        <label class="text-xs font-semibold text-gray-700 dark:text-gray-300 block">Immagine Caricata:</label>
+                        <div class="relative bg-black/10 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 max-h-64 flex items-center justify-center">
+                            <img id="ocrPreviewImg" src="" alt="Anteprima Scheda" class="max-h-64 object-contain">
+                        </div>
+                        <button id="runOcrBtn" class="w-full py-2.5 px-4 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition shadow">
+                            <i data-lucide="play" class="w-4 h-4"></i> Avvia Scansione Campi
+                        </button>
+                    </div>
+
+                    <!-- Risultati Estratti -->
+                    <div class="space-y-3 bg-gray-50 dark:bg-gray-800/40 p-3.5 rounded-xl border border-gray-200 dark:border-gray-800">
+                        <h4 class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider">Campi Riconosciuti</h4>
+                        
+                        <div class="grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                                <label class="text-[10px] text-gray-400 block font-semibold">Nome</label>
+                                <input id="ocrPerson" type="text" class="w-full p-2 text-xs rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800">
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-gray-400 block font-semibold">Assistente</label>
+                                <input id="ocrAssistant" type="text" class="w-full p-2 text-xs rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800">
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-gray-400 block font-semibold">Data</label>
+                                <input id="ocrDate" type="text" class="w-full p-2 text-xs rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800">
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-gray-400 block font-semibold">Parte N.</label>
+                                <input id="ocrPart" type="text" class="w-full p-2 text-xs rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="text-[10px] text-gray-400 block font-semibold">Luogo</label>
+                            <input id="ocrPlace" type="text" class="w-full p-2 text-xs rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800">
+                        </div>
+
+                        <div>
+                            <label class="text-[10px] text-gray-400 block font-semibold">Testo grezzo OCR (Log)</label>
+                            <textarea id="ocrRaw" rows="3" readonly class="w-full p-2 text-[10px] font-mono rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-500"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 flex justify-end gap-2">
+                <button id="cancelOcrBtn" class="px-4 py-2 rounded-xl text-xs font-semibold bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition">Annulla</button>
+                <button id="applyOcrBtn" class="px-4 py-2 rounded-xl text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white transition flex items-center gap-1.5">
+                    <i data-lucide="check" class="w-4 h-4"></i> Aggiungi a Tabella
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Modifica / Creazione Record -->
+    <div id="editModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-5">
+        <div class="bg-white dark:bg-gray-900 rounded-2xl max-w-lg w-full shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+            <div class="p-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+                <h3 id="editModalTitle" class="font-bold text-base text-gray-900 dark:text-white">Modifica Assegnazione</h3>
+                <button id="closeEditModalBtn" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form id="editForm" class="p-5 space-y-3.5">
+                <input type="hidden" id="editId">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-1">Data</label>
+                        <input id="editDate" type="text" placeholder="es. 5 novembre 2026" required class="w-full p-2.5 text-xs rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-1">Parte N.</label>
+                        <input id="editPart" type="text" placeholder="es. 4" required class="w-full p-2.5 text-xs rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-1">Nome Titolare (Cognome, Nome)</label>
+                    <input id="editPerson" type="text" placeholder="es. Melillo, Luca" required class="w-full p-2.5 text-xs rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                </div>
+
+                <div>
+                    <label class="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-1">Assistente (opzionale)</label>
+                    <input id="editAssistant" type="text" placeholder="es. Chierici, Sasha" class="w-full p-2.5 text-xs rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                </div>
+
+                <div>
+                    <label class="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-1">Luogo</label>
+                    <input id="editPlace" type="text" placeholder="es. Sala principale" class="w-full p-2.5 text-xs rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                </div>
+
+                <div class="pt-3 flex justify-end gap-2">
+                    <button type="button" id="cancelEditBtn" class="px-4 py-2 rounded-xl text-xs font-semibold bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600">Annulla</button>
+                    <button type="submit" class="px-4 py-2 rounded-xl text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white">Salva Assegnazione</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Anteprima Messaggio WhatsApp & Condivisione -->
+    <div id="msgModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-5">
+        <div class="bg-white dark:bg-gray-900 rounded-2xl max-w-md w-full shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+            <div class="p-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between bg-emerald-600 text-white">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="message-square" class="w-5 h-5"></i>
+                    <h3 class="font-bold text-base">Invia Messaggio WhatsApp</h3>
+                </div>
+                <button id="closeMsgModalBtn" class="text-white/80 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="p-5 space-y-4">
+                <div class="bg-emerald-50 dark:bg-emerald-950/40 p-3 rounded-xl border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+                    <i data-lucide="info" class="w-4 h-4 shrink-0"></i>
+                    <span>Destinatario: <b id="msgRecipientRole">Titolare</b> (<span id="msgRecipientName"></span>)</span>
+                </div>
+
+                <div>
+                    <label class="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-1">Testo del Messaggio:</label>
+                    <textarea id="msgTextArea" rows="5" class="w-full p-3 text-xs rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-emerald-500 focus:outline-none"></textarea>
+                </div>
+
+                <!-- Anteprima Immagine Scheda Allegata -->
+                <div id="msgImagePreviewContainer" class="hidden">
+                    <label class="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-1">Immagine Scheda Allegata:</label>
+                    <img id="msgImagePreview" src="" class="max-h-40 rounded-xl border border-gray-200 dark:border-gray-700 object-contain mx-auto">
+                </div>
+
+                <div class="space-y-2 pt-2">
+                    <button id="nativeShareBtn" class="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition shadow">
+                        <i data-lucide="share-2" class="w-4 h-4"></i> Condividi Testo + Immagine (App / Mobile)
+                    </button>
+                    <button id="openWaWebBtn" class="w-full py-2.5 px-4 bg-gray-800 dark:bg-gray-700 hover:bg-gray-900 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition">
+                        <i data-lucide="external-link" class="w-4 h-4"></i> Apri Web WhatsApp (Solo Testo)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Guida Modal -->
+    <div id="helpModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-5">
+        <div class="bg-white dark:bg-gray-900 rounded-2xl max-w-lg w-full shadow-2xl border border-gray-200 dark:border-gray-800 p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 pb-3">
+                <h3 class="font-bold text-lg text-gray-900 dark:text-white flex items-center gap-2">
+                    <i data-lucide="help-circle" class="w-5 h-5 text-brand-600"></i> Come funziona l'app S-89
+                </h3>
+                <button id="closeHelpBtn" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="text-xs text-gray-600 dark:text-gray-300 space-y-2.5 leading-relaxed">
+                <p><b>1. Dati Precaricati:</b> Trovi già presenti le 19 assegnazioni di Novembre e Dicembre 2026 tratte dal file S-89 ufficiale.</p>
+                <p><b>2. Caricamento PDF S-89:</b> Se importi un PDF S-89 generato dal programma di adunanza, le schede verranno estratte e aggiunte automaticamente in tabella.</p>
+                <p><b>3. Allegare le Schede:</b> Puoi caricare la foto o lo screenshot della singola scheda per ciascuna riga cliccando su <b>"Carica Scheda"</b>.</p>
+                <p><b>4. Invio WhatsApp:</b> Clicca sui pulsanti <span class="text-emerald-600 font-bold">Titolare</span> o <span class="text-blue-600 font-bold">Assistente</span> per preparare il messaggio personalizzato e inviarlo direttamente.</p>
+            </div>
+            <div class="pt-2 text-right">
+                <button id="confirmHelpBtn" class="px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-bold">Ho Capito</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Script -->
+    <script>
+        // Dati di default ufficiali S-89 (Novembre - Dicembre 2026)
+        const DEFAULT_ASSIGNMENTS = [
+            { id: '1', dateText: '5 novembre 2026', part: '3', person: 'Melillo, Luca', assistant: '', place: 'Sala principale', image: null },
+            { id: '2', dateText: '5 novembre 2026', part: '4', person: 'Iotti, Maria Rosa', assistant: 'Chierici, Sasha', place: 'Sala principale', image: null },
+            { id: '3', dateText: '5 novembre 2026', part: '5', person: 'Cheli, Clelia', assistant: 'Ianniciello, Raluca', place: 'Sala principale', image: null },
+            { id: '4', dateText: '5 novembre 2026', part: '6', person: 'Montalto, Michela', assistant: 'Ruini, Carmela', place: 'Sala principale', image: null },
+            { id: '5', dateText: '12 novembre 2026', part: '3', person: 'Galante, Misael', assistant: '', place: 'Sala principale', image: null },
+            { id: '6', dateText: '12 novembre 2026', part: '4', person: 'Bellelli, Elisa', assistant: 'Carretti, Mariagrazia', place: 'Sala principale', image: null },
+            { id: '7', dateText: '12 novembre 2026', part: '5', person: 'Silvestre, Vincenza', assistant: 'Upali, Sara', place: 'Sala principale', image: null },
+            { id: '8', dateText: '12 novembre 2026', part: '6', person: 'Cheli, Mattia', assistant: '', place: 'Sala principale', image: null },
+            { id: '9', dateText: '19 novembre 2026', part: '3', person: 'Lepore, Attilio', assistant: '', place: 'Sala principale', image: null },
+            { id: '10', dateText: '19 novembre 2026', part: '4', person: 'Covezzi, Luisa', assistant: 'Ardanese, Luca', place: 'Sala principale', image: null },
+            { id: '11', dateText: '19 novembre 2026', part: '5', person: 'Gazzotti, Elisa', assistant: 'Laterza, Elisa', place: 'Sala principale', image: null },
+            { id: '12', dateText: '26 novembre 2026', part: '3', person: 'Ianniciello, Mosè', assistant: '', place: 'Sala principale', image: null },
+            { id: '13', dateText: '26 novembre 2026', part: '4', person: 'De Cecilia, Lidia', assistant: 'Acsinte, Maria', place: 'Sala principale', image: null },
+            { id: '14', dateText: '26 novembre 2026', part: '5', person: 'Lepore, Nicole', assistant: 'Ruini, Irene', place: 'Sala principale', image: null },
+            { id: '15', dateText: '26 novembre 2026', part: '6', person: 'Viscomi, Simone', assistant: '', place: 'Sala principale', image: null },
+            { id: '16', dateText: '3 dicembre 2026', part: '3', person: 'Manzini, Luciano', assistant: '', place: 'Sala principale', image: null },
+            { id: '17', dateText: '3 dicembre 2026', part: '4', person: 'Massimino, Irene', assistant: 'Di Chiara, Federica', place: 'Sala principale', image: null },
+            { id: '18', dateText: '3 dicembre 2026', part: '5', person: 'Chetta, Alessia', assistant: 'De Pas, Sonia', place: 'Sala principale', image: null },
+            { id: '19', dateText: '3 dicembre 2026', part: '6', person: 'Ianniciello, Alessandro', assistant: '', place: 'Sala principale', image: null }
+        ];
+
+        let assignments = [...DEFAULT_ASSIGNMENTS];
+        let activeOcrImage = null;
+        let activeMsgRecord = null;
+        let activeMsgRole = 'person'; // 'person' or 'assistant'
+
+        // Helper Selezione DOM
+        const $ = id => document.getElementById(id);
+
+        // Inizializzazione Applicazione
+        window.addEventListener('DOMContentLoaded', () => {
+            initTheme();
+            renderTable();
+            populateDateFilter();
+            setupEventListeners();
+            lucide.createIcons();
+        });
+
+        // Gestione Tema Chiaro/Scuro
+        function initTheme() {
+            if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+                $('themeIconSun').classList.remove('hidden');
+                $('themeIconMoon').classList.add('hidden');
+            } else {
+                document.documentElement.classList.remove('dark');
+                $('themeIconSun').classList.add('hidden');
+                $('themeIconMoon').classList.remove('hidden');
+            }
+        }
+
+        $('themeToggleBtn').addEventListener('click', () => {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.theme = isDark ? 'dark' : 'light';
+            $('themeIconSun').classList.toggle('hidden', !isDark);
+            $('themeIconMoon').classList.toggle('hidden', isDark);
+        });
+
+        // Popola Filtro Date
+        function populateDateFilter() {
+            const dateSelect = $('dateFilter');
+            dateSelect.innerHTML = '<option value="ALL">Tutte le date</option>';
+            const uniqueDates = [...new Set(assignments.map(a => a.dateText))];
+            uniqueDates.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d;
+                opt.textContent = d;
+                dateSelect.appendChild(opt);
+            });
+        }
+
+        // Renderizza Tabella Principale
+        function renderTable() {
+            const tbody = $('assignmentsTbody');
+            const searchVal = $('searchInput').value.toLowerCase().trim();
+            const dateVal = $('dateFilter').value;
+            const imgVal = $('imageFilter').value;
+
+            const filtered = assignments.filter(item => {
+                const matchSearch = item.person.toLowerCase().includes(searchVal) ||
+                                    item.assistant.toLowerCase().includes(searchVal) ||
+                                    item.dateText.toLowerCase().includes(searchVal) ||
+                                    item.part.includes(searchVal);
+                const matchDate = (dateVal === 'ALL') || (item.dateText === dateVal);
+                const matchImg = (imgVal === 'ALL') || 
+                                 (imgVal === 'WITH_IMG' && item.image) || 
+                                 (imgVal === 'NO_IMG' && !item.image);
+                return matchSearch && matchDate && matchImg;
+            });
+
+            $('totalCount').textContent = assignments.length;
+            $('visibleCount').textContent = filtered.length;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="py-8 text-center text-gray-400 dark:text-gray-500">
+                            <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+                            Nessuna assegnazione trovata con i filtri correnti.
+                        </td>
+                    </tr>`;
+                lucide.createIcons();
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(item => `
+                <tr class="hover:bg-gray-50/80 dark:hover:bg-gray-800/40 transition group">
+                    <td class="py-3 px-4 font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">${item.dateText}</td>
+                    <td class="py-3 px-3 text-center font-bold text-brand-600 dark:text-brand-400">
+                        <span class="inline-block px-2 py-0.5 rounded-md bg-brand-50 dark:bg-brand-950/60 border border-brand-200 dark:border-brand-800">
+                            N. ${item.part}
+                        </span>
+                    </td>
+                    <td class="py-3 px-4 font-semibold text-gray-900 dark:text-white">${item.person}</td>
+                    <td class="py-3 px-4 text-gray-600 dark:text-gray-300">${item.assistant ? item.assistant : '<span class="text-gray-400 dark:text-gray-600 font-normal">—</span>'}</td>
+                    <td class="py-3 px-3 text-gray-500 dark:text-gray-400 text-xs">${item.place}</td>
+                    <td class="py-3 px-3 text-center">
+                        ${item.image ? `
+                            <div class="relative inline-block group/img">
+                                <img src="${item.image}" class="w-10 h-10 object-cover rounded-lg border border-emerald-500 shadow-sm cursor-pointer hover:scale-105 transition" onclick="previewImage('${item.id}')">
+                                <button onclick="removeImage('${item.id}')" class="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover/img:opacity-100 transition" title="Rimuovi Immagine">
+                                    <i data-lucide="x" class="w-3 h-3"></i>
+                                </button>
+                            </div>
+                        ` : `
+                            <label class="cursor-pointer inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-emerald-100 dark:hover:bg-emerald-950 hover:text-emerald-700 transition border border-gray-200 dark:border-gray-700">
+                                <i data-lucide="upload" class="w-3 h-3"></i> Carica
+                                <input type="file" accept="image/*" class="hidden" onchange="uploadRowImage(event, '${item.id}')">
+                            </label>
+                        `}
+                    </td>
+                    <td class="py-3 px-4 text-right whitespace-nowrap">
+                        <div class="flex items-center justify-end gap-1.5">
+                            <button onclick="openMsgModal('${item.id}', 'person')" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition shadow-sm" title="Invia a Titolare">
+                                <i data-lucide="send" class="w-3.5 h-3.5"></i> Titolare
+                            </button>
+                            ${item.assistant ? `
+                                <button onclick="openMsgModal('${item.id}', 'assistant')" class="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition shadow-sm" title="Invia ad Assistente">
+                                    <i data-lucide="user-check" class="w-3.5 h-3.5"></i> Assistente
+                                </button>
+                            ` : ''}
+                            <button onclick="openEditModal('${item.id}')" class="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800" title="Modifica">
+                                <i data-lucide="edit-3" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="deleteRecord('${item.id}')" class="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40" title="Elimina">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+
+            lucide.createIcons();
+        }
+
+        // Listener per filtri e ricerche
+        function setupEventListeners() {
+            $('searchInput').addEventListener('input', renderTable);
+            $('dateFilter').addEventListener('change', renderTable);
+            $('imageFilter').addEventListener('change', renderTable);
+
+            // Caricamento PDF S-89
+            $('pdfInput').addEventListener('change', handlePdfUpload);
+
+            // OCR Single Image Input
+            $('singleImageInput').addEventListener('change', handleSingleImageOcrInput);
+
+            // Reset dati
+            $('resetDataBtn').addEventListener('click', () => {
+                if(confirm('Ripristinare le 19 assegnazioni di default per Novembre/Dicembre 2026?')) {
+                    assignments = JSON.parse(JSON.stringify(DEFAULT_ASSIGNMENTS));
+                    populateDateFilter();
+                    renderTable();
+                    setStatus('Ripristinati dati predefiniti.');
+                }
+            });
+
+            // Modals
+            $('closeOcrModalBtn').addEventListener('click', () => $('ocrModal').classList.add('hidden'));
+            $('cancelOcrBtn').addEventListener('click', () => $('ocrModal').classList.add('hidden'));
+            $('closeEditModalBtn').addEventListener('click', () => $('editModal').classList.add('hidden'));
+            $('cancelEditBtn').addEventListener('click', () => $('editModal').classList.add('hidden'));
+            $('closeMsgModalBtn').addEventListener('click', () => $('msgModal').classList.add('hidden'));
+            $('helpBtn').addEventListener('click', () => $('helpModal').classList.remove('hidden'));
+            $('closeHelpBtn').addEventListener('click', () => $('helpModal').classList.add('hidden'));
+            $('confirmHelpBtn').addEventListener('click', () => $('helpModal').classList.add('hidden'));
+
+            // Edit Form Submit
+            $('editForm').addEventListener('submit', handleEditSubmit);
+            $('addRecordBtn').addEventListener('click', () => openEditModal(null));
+
+            // Run OCR
+            $('runOcrBtn').addEventListener('click', runOcrScan);
+            $('applyOcrBtn').addEventListener('click', applyOcrResultToTable);
+
+            // WhatsApp Share
+            $('nativeShareBtn').addEventListener('click', executeNativeShare);
+            $('openWaWebBtn').addEventListener('click', executeWaWebOpen);
+        }
+
+        function setStatus(msg) {
+            $('statusText').innerHTML = msg;
+        }
+
+        // === GESTIONE CARICAMENTO IMMAGINI RIGHE ===
+        function uploadRowImage(event, id) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = e => {
+                const item = assignments.find(a => a.id === id);
+                if (item) {
+                    item.image = e.target.result;
+                    renderTable();
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeImage(id) {
+            const item = assignments.find(a => a.id === id);
+            if (item) {
+                item.image = null;
+                renderTable();
+            }
+        }
+
+        function previewImage(id) {
+            const item = assignments.find(a => a.id === id);
+            if (item && item.image) {
+                const w = window.open("");
+                w.document.write(`<img src="${item.image}" style="max-width:100%; border-radius:8px;">`);
+            }
+        }
+
+        // === GESTIONE EDIT / NUOVO RECORD ===
+        function openEditModal(id) {
+            if (id) {
+                const item = assignments.find(a => a.id === id);
+                if (!item) return;
+                $('editModalTitle').textContent = 'Modifica Assegnazione';
+                $('editId').value = item.id;
+                $('editDate').value = item.dateText;
+                $('editPart').value = item.part;
+                $('editPerson').value = item.person;
+                $('editAssistant').value = item.assistant || '';
+                $('editPlace').value = item.place || 'Sala principale';
+            } else {
+                $('editModalTitle').textContent = 'Nuova Assegnazione';
+                $('editId').value = '';
+                $('editDate').value = '';
+                $('editPart').value = '';
+                $('editPerson').value = '';
+                $('editAssistant').value = '';
+                $('editPlace').value = 'Sala principale';
+            }
+            $('editModal').classList.remove('hidden');
+        }
+
+        function handleEditSubmit(e) {
+            e.preventDefault();
+            const id = $('editId').value;
+            const record = {
+                id: id || Date.now().toString(),
+                dateText: $('editDate').value.trim(),
+                part: $('editPart').value.trim(),
+                person: $('editPerson').value.trim(),
+                assistant: $('editAssistant').value.trim(),
+                place: $('editPlace').value.trim(),
+                image: id ? (assignments.find(a => a.id === id)?.image || null) : null
+            };
+
+            if (id) {
+                const idx = assignments.findIndex(a => a.id === id);
+                if (idx !== -1) assignments[idx] = record;
+            } else {
+                assignments.unshift(record);
+            }
+
+            populateDateFilter();
+            renderTable();
+            $('editModal').classList.add('hidden');
+        }
+
+        function deleteRecord(id) {
+            if (confirm('Eliminare questa assegnazione?')) {
+                assignments = assignments.filter(a => a.id !== id);
+                populateDateFilter();
+                renderTable();
+            }
+        }
+
+        // === MESSAGGI WHATSAPP & CONDIVISIONE ===
+        function openMsgModal(id, role) {
+            const item = assignments.find(a => a.id === id);
+            if (!item) return;
+
+            activeMsgRecord = item;
+            activeMsgRole = role;
+
+            const first = name => name.includes(',') ? name.split(',')[1].trim() : name.split(' ').slice(-1)[0];
+            const name = role === 'person' ? first(item.person) : first(item.assistant);
+            
+            $('msgRecipientRole').textContent = role === 'person' ? 'Titolare' : 'Assistente';
+            $('msgRecipientName').textContent = role === 'person' ? item.person : item.assistant;
+
+            let msg = '';
+            if (role === 'person') {
+                msg = `Ciao ${name}! 😊 Ti invio i dettagli della tua parte per l’adunanza Vita cristiana e ministero del ${item.dateText}.\n\n📌 Parte n. ${item.part}\n📍 ${item.place}`;
+            } else {
+                msg = `Ciao ${name}! 😊 Ti invio i dettagli della parte in cui sei assistente per l’adunanza Vita cristiana e ministero del ${item.dateText}.\n\n📌 Parte n. ${item.part}\n📍 ${item.place}`;
+            }
+
+            $('msgTextArea').value = msg;
+
+            if (item.image) {
+                $('msgImagePreview').src = item.image;
+                $('msgImagePreviewContainer').classList.remove('hidden');
+            } else {
+                $('msgImagePreviewContainer').classList.add('hidden');
+            }
+
+            $('msgModal').classList.remove('hidden');
+        }
+
+        async function executeNativeShare() {
+            if (!activeMsgRecord) return;
+            const text = $('msgTextArea').value;
+
+            try {
+                if (navigator.share) {
+                    const shareData = { title: 'Assegnazione S-89', text: text };
+                    
+                    if (activeMsgRecord.image && navigator.canShare) {
+                        const blob = await (await fetch(activeMsgRecord.image)).blob();
+                        const file = new File([blob], `Scheda_S89_${activeMsgRecord.person.replace(/\s+/g, '_')}.jpg`, { type: 'image/jpeg' });
+                        if (navigator.canShare({ files: [file] })) {
+                            shareData.files = [file];
+                        }
+                    }
+
+                    await navigator.share(shareData);
+                    $('msgModal').classList.add('hidden');
+                    return;
+                }
+            } catch (err) {
+                console.log('Share fallito o annullato', err);
+            }
+
+            // Fallback WhatsApp Web
+            executeWaWebOpen();
+        }
+
+        function executeWaWebOpen() {
+            const text = encodeURIComponent($('msgTextArea').value);
+            window.open(`https://wa.me/?text=${text}`, '_blank', 'noopener');
+            $('msgModal').classList.add('hidden');
+        }
+
+        // === PARSING PDF AUTOMATICO ===
+        async function handlePdfUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            setStatus('Elaborazione PDF S-89 in corso...');
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                let extractedCount = 0;
+
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    const text = textContent.items.map(item => item.str).join(' ');
+                    
+                    // Parsing testo scheda S-89
+                    const parsedRecords = parseS89Text(text);
+                    if (parsedRecords.length > 0) {
+                        assignments.push(...parsedRecords);
+                        extractedCount += parsedRecords.length;
+                    }
+                }
+
+                populateDateFilter();
+                renderTable();
+                setStatus(`PDF analizzato con successo! Estratte <b>${extractedCount}</b> assegnazioni.`);
+            } catch (err) {
+                console.error(err);
+                setStatus('<span class="text-red-500">Errore durante la lettura del file PDF.</span>');
+            }
+        }
+
+        function parseS89Text(fullText) {
+            // RegEx di matching base per schede S-89
+            const records = [];
+            const blocks = fullText.split(/PARTE PER L'ADUNANZA/i).filter(b => b.trim().length > 0);
+
+            blocks.forEach(block => {
+                const nameMatch = block.match(/Nome:\s*([^:\n]+?)(?=Assistente:|Data:|$)/i);
+                const assistantMatch = block.match(/Assistente:\s*([^:\n]+?)(?=Data:|Parte|$)/i);
+                const dateMatch = block.match(/Data:\s*([0-9]{1,2}\s+[a-zA-Zàèéìòù]+\s+20[0-9]{2})/i);
+                const partMatch = block.match(/Parte\s*n\.\s*:?\s*(\d+)/i);
+
+                if (nameMatch && dateMatch) {
+                    records.push({
+                        id: Date.now().toString() + Math.random().toString(36).substr(2, 4),
+                        person: nameMatch[1].trim(),
+                        assistant: assistantMatch ? assistantMatch[1].trim() : '',
+                        dateText: dateMatch[1].trim(),
+                        part: partMatch ? partMatch[1].trim() : '3',
+                        place: 'Sala principale',
+                        image: null
+                    });
+                }
+            });
+
+            return records;
+        }
+
+        // === LETTORE OCR VISIVO CON CROPPING ===
+        function handleSingleImageOcrInput(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = evt => {
+                activeOcrImage = new Image();
+                activeOcrImage.src = evt.target.result;
+                activeOcrImage.onload = () => {
+                    $('ocrPreviewImg').src = activeOcrImage.src;
+                    $('ocrPerson').value = '';
+                    $('ocrAssistant').value = '';
+                    $('ocrDate').value = '';
+                    $('ocrPart').value = '';
+                    $('ocrPlace').value = 'Sala principale';
+                    $('ocrRaw').value = 'Premi "Avvia Scansione Campi" per iniziare il ritaglio visivo.';
+                    $('ocrModal').classList.remove('hidden');
+                };
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function cropZoneCanvas(img, y1, y2, x1 = .08, x2 = .94) {
+            const c = document.createElement('canvas');
+            const sx = Math.round(img.naturalWidth * x1), sy = Math.round(img.naturalHeight * y1);
+            const sw = Math.round(img.naturalWidth * (x2 - x1)), sh = Math.round(img.naturalHeight * (y2 - y1));
+            const scale = Math.max(2, Math.min(4, 2200 / Math.max(sw, sh)));
+            c.width = Math.round(sw * scale); c.height = Math.round(sh * scale);
+            const ctx = c.getContext('2d');
+            ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+            ctx.filter = 'grayscale(1) contrast(1.4)';
+            ctx.drawImage(img, sx, sy, sw, sh, 0, 0, c.width, c.height);
+            ctx.filter = 'none';
+            return c;
+        }
+
+        async function runOcrScan() {
+            if (!activeOcrImage) return;
+            $('ocrRaw').value = 'Analisi OCR in corso sulle zone di ritaglio...';
+
+            const zones = {
+                person: cropZoneCanvas(activeOcrImage, .205, .273, .22, .90),
+                assistant: cropZoneCanvas(activeOcrImage, .292, .359, .22, .90),
+                dateText: cropZoneCanvas(activeOcrImage, .378, .445, .15, .96),
+                part: cropZoneCanvas(activeOcrImage, .460, .536, .15, .85),
+                place: cropZoneCanvas(activeOcrImage, .558, .618, .32, .90)
+            };
+
+            const results = {};
+            for (const [key, canvas] of Object.entries(zones)) {
+                try {
+                    const res = await Tesseract.recognize(canvas, 'ita+eng', {
+                        tessedit_pageseg_mode: 6,
+                        ...(key === 'part' ? { tessedit_char_whitelist: '0123456789' } : {})
+                    });
+                    results[key] = (res.data.text || '').trim();
+                } catch (err) {
+                    results[key] = '';
+                }
+            }
+
+            $('ocrRaw').value = Object.entries(results).map(([k, v]) => `${k}: ${v}`).join('\n');
+            $('ocrPerson').value = tidyText(results.person);
+            $('ocrAssistant').value = tidyText(results.assistant);
+            $('ocrDate').value = tidyText(results.dateText);
+            const digits = results.part.match(/\d+/);
+            $('ocrPart').value = digits ? digits[0] : '';
+            if (results.place) $('ocrPlace').value = tidyText(results.place);
+        }
+
+        function tidyText(s) {
+            return s.replace(/[\u2500-\u257f_~`|]+/g, ' ').replace(/\s+/g, ' ').trim();
+        }
+
+        function applyOcrResultToTable() {
+            const person = $('ocrPerson').value.trim();
+            const dateText = $('ocrDate').value.trim();
+            if (!person || !dateText) {
+                alert('Inserisci almeno Nome e Data estratti.');
+                return;
+            }
+
+            assignments.unshift({
+                id: Date.now().toString(),
+                person: person,
+                assistant: $('ocrAssistant').value.trim(),
+                dateText: dateText,
+                part: $('ocrPart').value.trim() || '3',
+                place: $('ocrPlace').value.trim() || 'Sala principale',
+                image: activeOcrImage ? activeOcrImage.src : null
+            });
+
+            populateDateFilter();
+            renderTable();
+            $('ocrModal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
+```
+
+
+Riparti da qui e apri il progetto
